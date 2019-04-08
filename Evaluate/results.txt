@@ -1,0 +1,1 @@
+ Average Miss Rate  (MR) @ All                [ IoU=0.50      | height=[0:10000000000] | visibility=[0.20:10000000000.00] ] = 99.54%
