@@ -7,6 +7,7 @@ from utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
 from anchors import Anchors
 import losses
 from lib.nms.pth_nms import pth_nms
+import numpy as np
 
 def nms(dets, thresh):
     "Dispatch to either CPU or GPU NMS implementations.\
@@ -265,15 +266,20 @@ class ResNet(nn.Module):
             scores = torch.max(classification, dim=2, keepdim=True)[0]
 
             scores_over_thresh = (scores>0.05)[0, :, 0]
+            # scores_over_thresh = (scores >= 0.0)[0, :, 0]
 
             if scores_over_thresh.sum() == 0:
                 # no boxes to NMS, just return
-                return [torch.zeros(0), torch.zeros(0), torch.zeros(0, 4)]
+                return [torch.zeros([1]).cuda(0), torch.zeros([1]).cuda(0), torch.zeros([1, 4]).cuda(0)]
+                # return [torch.zeros(0), torch.zeros(0), torch.zeros(0, 4)]
 
             classification = classification[:, scores_over_thresh, :]
             transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
             scores = scores[:, scores_over_thresh, :]
 
+            # modify
+            # transformed_anchors, scores = post_nums(transformed_anchors, scores, features)
+            #
             anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
 
             nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
@@ -334,3 +340,63 @@ def resnet152(num_classes, pretrained=False, **kwargs):
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet152'], model_dir='.'), strict=False)
     return model
+
+def post_nums(boxes, scores, features):
+    boxes = boxes.cpu().numpy()
+    scores = scores.cpu().numpy()
+    scores = scores[:, :, 0]
+    per_anchor = []
+    stride = [8, 16, 32, 64, 128]
+    lboxes = []
+    lscores = []
+    for i in features:
+        per_anchor.append([i.shape[2], i.shape[3]])
+
+    add = 0
+    for i in range(len(per_anchor)):
+        num = per_anchor[i][0] * per_anchor[i][1] * 9
+        box = boxes[0][add: add + num]
+        score = scores[0][add: add + num]
+        add = add + num
+        st = stride[i]
+        for j in range(9):
+            bb = box[j::9]
+            s = score[j::9]
+            for idx, t in enumerate(bb):
+                tx = int((t[0] + t[2])/2 / st + 0.5)
+                ty = int((t[1] + t[3])/2 / st + 0.5)
+                pos = ty * per_anchor[i][1] + tx
+                ts = s[idx]
+                tbox = t.copy()
+                if ts <= 0.85:
+                    continue
+                for ne in range(100):
+                    nb = bb[pos]
+                    px = int((nb[0] + nb[2]) / 2 / st + 0.5)
+                    py = int((nb[1] + nb[3]) / 2 / st + 0.5)
+                    ppos = py * per_anchor[i][1] + px
+                    ps = s[ppos]
+                    if ps < 0.05:
+                        break
+                    if ps < ts:
+                        break
+                    if px == tx and py == ty:
+                        lboxes.append(tbox)
+                        lscores.append(ts)
+                        break
+                    s[pos] = 0
+                    tx = px
+                    ty = py
+                    ts = ps
+                    pos = ppos
+                    tbox = nb
+
+                # lboxes.append(tbox)
+                # lscores.append(ts)
+    lboxes = np.array(lboxes)[np.newaxis, :, :]
+    lscores = np.array(lscores)[np.newaxis, :, np.newaxis]
+    return torch.from_array(lboxes), torch.from_array(lscores)
+
+
+
+

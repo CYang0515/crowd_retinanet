@@ -17,7 +17,7 @@ from torchvision import datasets, models, transforms
 from dataloader import CocoDataset, CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
 
 
-assert torch.__version__.split('.')[1] == '4'
+# assert torch.__version__.split('.')[1] == '4'
 
 print('CUDA available: {}'.format(torch.cuda.is_available()))
 
@@ -25,19 +25,19 @@ print('CUDA available: {}'.format(torch.cuda.is_available()))
 def main(args=None):
 	parser = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
 
-	parser.add_argument('--dataset', help='Dataset type, must be one of csv or coco.')
+	parser.add_argument('--dataset', default='csv', help='Dataset type, must be one of csv or coco.')
 	parser.add_argument('--coco_path', help='Path to COCO directory')
-	parser.add_argument('--csv_classes', help='Path to file containing class list (see readme)')
-	parser.add_argument('--csv_val', help='Path to file containing validation annotations (optional, see readme)')
+	parser.add_argument('--csv_classes', default='./data/class.csv', help='Path to file containing class list (see readme)')
+	parser.add_argument('--csv_val', default='./data/val_data.csv', help='Path to file containing validation annotations (optional, see readme)')
 
-	parser.add_argument('--model', help='Path to model (.pt) file.')
+	parser.add_argument('--model', default='full_csv_retinanet_19_mAP{0: (0.6923637462079554, 97604.0)}_dis[16.32488733].pt', help='Path to model (.pt) file.')
 
 	parser = parser.parse_args(args)
 
 	if parser.dataset == 'coco':
 		dataset_val = CocoDataset(parser.coco_path, set_name='val2017', transform=transforms.Compose([Normalizer(), Resizer()]))
 	elif parser.dataset == 'csv':
-		dataset_val = CSVDataset(train_file=parser.csv_train, class_list=parser.csv_classes, transform=transforms.Compose([Normalizer(), Resizer()]))
+		dataset_val = CSVDataset(train_file=parser.csv_val, class_list=parser.csv_classes, transform=transforms.Compose([Normalizer(), Resizer()]))
 	else:
 		raise ValueError('Dataset type not understood (must be csv or coco), exiting.')
 
@@ -67,7 +67,7 @@ def main(args=None):
 			st = time.time()
 			scores, classification, transformed_anchors = retinanet(data['img'].cuda().float())
 			print('Elapsed time: {}'.format(time.time()-st))
-			idxs = np.where(scores>0.5)
+			idxs = np.where(scores.cpu()>0.5)
 			img = np.array(255 * unnormalize(data['img'][0, :, :, :])).copy()
 
 			img[img<0] = 0
@@ -83,14 +83,18 @@ def main(args=None):
 				y1 = int(bbox[1])
 				x2 = int(bbox[2])
 				y2 = int(bbox[3])
+				x_c = int(bbox[4])
+				y_c = int(bbox[5])
 				label_name = dataset_val.labels[int(classification[idxs[0][j]])]
 				draw_caption(img, (x1, y1, x2, y2), label_name)
 
 				cv2.rectangle(img, (x1, y1), (x2, y2), color=(0, 0, 255), thickness=2)
+				cv2.rectangle(img, (x_c - 5, y_c - 5), (x_c + 5, y_c + 5), color=(0, 0, 255), thickness=2)
 				print(label_name)
 
-			cv2.imshow('img', img)
-			cv2.waitKey(0)
+			# cv2.imshow('img', img)
+			cv2.imwrite('./img.jpg', img)
+			# cv2.waitKey(0)
 
 
 
