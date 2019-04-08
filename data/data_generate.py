@@ -2,13 +2,13 @@
 generate individual head full visible csv file
 '''
 
-body_train_json = '/home/YC/Retinanet/pytorch-retinanet-master/data/crowdhumantrain_body.json'
-body_val_json = '/home/YC/Retinanet/pytorch-retinanet-master/data/crowdhumanval_body.json'
-head_train_json = '/home/YC/Retinanet/pytorch-retinanet-master/data/crowdhumantrain_head.json'
-head_val_json = '/home/YC/Retinanet/pytorch-retinanet-master/data/crowdhumanval_head.json'
-vis_train_json = '/home/YC/Retinanet/pytorch-retinanet-master/data/crowdhumantrain_visible.json'
-vis_val_json = '/home/YC/Retinanet/pytorch-retinanet-master/data/crowdhumanval_visible.json'
-train_data = '/home/YC/FasterRCNN/COCO/train2014/'
+body_train_json = './crowdhumantrain_body.json'
+body_val_json = './crowdhumanval_body.json'
+head_train_json = './crowdhumantrain_head.json'
+head_val_json = './crowdhumanval_head.json'
+vis_train_json = './crowdhumantrain_visible.json'
+vis_val_json = './crowdhumanval_visible.json'
+train_data = '/home/YC/FasterRCNN/COCO/train2014/'  # file dir that storage image data
 val_data = '/home/YC/FasterRCNN/COCO/val2014/'
 
 body_train_csv = './train_data.csv'
@@ -79,7 +79,7 @@ def ann_csv():
 ann_csv()
 out = open(body_val_csv, 'r')
 read = csv.reader(out)
-from PIL import ImageDraw, Image
+from PIL import ImageDraw, Image  # vis data whether is true
 for x, line in enumerate(read):
     name = line[0]
     box = line[1:-1]
