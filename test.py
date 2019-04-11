@@ -16,7 +16,7 @@ from torch.autograd import Variable
 from torchvision import datasets, models, transforms
 import torchvision
 
-import model
+import hfv_model as model
 from anchors import Anchors
 import losses
 # from dataloader import CocoDataset, CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
@@ -48,7 +48,7 @@ def main(args=None):
 
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
     parser.add_argument('--epochs', help='Number of epochs', type=int, default=100)
-    parser.add_argument('--model', help='Pretrained model or nothing', type=str, default='full_csv_retinanet_19_mAP{0: (0.6923637462079554, 97604.0)}_dis[16.32488733].pt')
+    parser.add_argument('--model', help='Pretrained model or nothing', type=str, default='/home/YC/pytorch-retinanet/all_full_csv_retinanet_36_mAP{0: (0.6896753220630812, 99481.0)}_dis[12.61821368].pt')
     parser.add_argument('--gpu', help='Whether to use gpu', type=bool, default=True)
 
     parser = parser.parse_args(args)
@@ -81,38 +81,36 @@ def main(args=None):
     print('2')
 
     print('3')
-    if parser.model is not None:
+    if not os.path.isfile('./process.pth.tar'):
         print('loading pretrained model {}'.format(parser.model))
         retinanet = torch.load(parser.model)
-        s_b = parser.model.rindex('_')
-        s_e = parser.model.rindex('.')
+        torch.save(retinanet.state_dict(), './process.pth.tar')
         start = 0
         print('continue on {}'.format(start))
     else:
         # Create the model
         print('init model resnet{}'.format(parser.depth))
         if parser.depth == 18:
-            retinanet = model.resnet18(num_classes=dataset_train.num_classes(), pretrained=False)
+            retinanet = model.resnet18(num_classes=1, pretrained=False)
         elif parser.depth == 34:
-            retinanet = model.resnet34(num_classes=dataset_train.num_classes(), pretrained=False)
+            retinanet = model.resnet34(num_classes=1, pretrained=False)
         elif parser.depth == 50:
-            retinanet = model.resnet50(num_classes=dataset_train.num_classes(), pretrained=False)
+            retinanet = model.resnet50(num_classes=1, pretrained=False)
         elif parser.depth == 101:
-            retinanet = model.resnet101(num_classes=dataset_train.num_classes(), pretrained=False)
+            retinanet = model.resnet101(num_classes=1, pretrained=False)
         elif parser.depth == 152:
-            retinanet = model.resnet152(num_classes=dataset_train.num_classes(), pretrained=False)
+            retinanet = model.resnet152(num_classes=1, pretrained=False)
         else:
             raise ValueError('Unsupported model depth, must be one of 18, 34, 50, 101, 152')
 
     # use_gpu = True
     print('4')
+    retinanet.load_state_dict(torch.load('./process.pth.tar'))
     if parser.gpu:
         retinanet = retinanet.cuda()
 
     retinanet = torch.nn.DataParallel(retinanet).cuda()
 
-    # for epoch_num in range(parser.epochs):
-    # if parser.dataset == 'coco':
     if dataset_val is not None:
         if parser.dataset == 'coco':
             print('Evaluating dataset')

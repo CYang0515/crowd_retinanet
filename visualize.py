@@ -6,6 +6,7 @@ import copy
 import pdb
 import time
 import argparse
+import hfv_model as model
 
 import sys
 import cv2
@@ -30,7 +31,7 @@ def main(args=None):
 	parser.add_argument('--csv_classes', default='./data/class.csv', help='Path to file containing class list (see readme)')
 	parser.add_argument('--csv_val', default='./data/val_data.csv', help='Path to file containing validation annotations (optional, see readme)')
 
-	parser.add_argument('--model', default='full_csv_retinanet_19_mAP{0: (0.6923637462079554, 97604.0)}_dis[16.32488733].pt', help='Path to model (.pt) file.')
+	parser.add_argument('--model', default='', help='Path to model (.pt) file.')
 
 	parser = parser.parse_args(args)
 
@@ -44,7 +45,9 @@ def main(args=None):
 	sampler_val = AspectRatioBasedSampler(dataset_val, batch_size=1, drop_last=False)
 	dataloader_val = DataLoader(dataset_val, num_workers=1, collate_fn=collater, batch_sampler=sampler_val)
 
-	retinanet = torch.load(parser.model)
+	# retinanet = torch.load(parser.model)
+	retinanet = model.resnet50(num_classes=1, pretrained=False)
+	retinanet.load_state_dict(torch.load('./process.pth.tar'))
 
 	use_gpu = True
 
@@ -85,11 +88,14 @@ def main(args=None):
 				y2 = int(bbox[3])
 				x_c = int(bbox[4])
 				y_c = int(bbox[5])
+				x2_c = int(bbox[6])
+				y2_c = int(bbox[7])
 				label_name = dataset_val.labels[int(classification[idxs[0][j]])]
 				draw_caption(img, (x1, y1, x2, y2), label_name)
 
 				cv2.rectangle(img, (x1, y1), (x2, y2), color=(0, 0, 255), thickness=2)
-				cv2.rectangle(img, (x_c - 5, y_c - 5), (x_c + 5, y_c + 5), color=(0, 0, 255), thickness=2)
+				cv2.rectangle(img, (x_c, y_c), (x2_c, y2_c), color=(0, 255, 0), thickness=2)
+				# cv2.rectangle(img, (x_c - 5, y_c - 5), (x_c + 5, y_c + 5), color=(0, 0, 255), thickness=2)
 				print(label_name)
 
 			# cv2.imshow('img', img)
