@@ -102,3 +102,5 @@ ENV/
 *.zip
 *.pt
 *.json
+*.tar
+*.img
