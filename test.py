@@ -20,11 +20,14 @@ import hfv_model as model
 from anchors import Anchors
 import losses
 # from dataloader import CocoDataset, CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
-from dataloader import *
+# from dataloader import *
+from hfv_dataloader import *
 from torch.utils.data import Dataset, DataLoader
 
 import coco_eval
-import csv_eval
+# import csv_eval
+# import hfv_csv_eval as csv_eval
+import hfv_crowdhuman_eval as csv_eval
 
 # assert torch.__version__.split('.')[1] == '4'
 
@@ -37,11 +40,11 @@ def main(args=None):
 
     parser.add_argument('--dataset', default='csv', help='Dataset type, must be one of csv or coco.')
     parser.add_argument('--coco_path', help='Path to COCO directory')
-    parser.add_argument('--csv_train', default='./data/train_data.csv',
+    parser.add_argument('--csv_train', default='./data/pair_train_all.csv',
                         help='Path to file containing training annotations (see readme)')
     parser.add_argument('--csv_classes', default='./data/class.csv',
                         help='Path to file containing class list (see readme)')
-    parser.add_argument('--csv_val', default='./data/val_data.csv',
+    parser.add_argument('--csv_val', default='./data/pair_val_all.csv',
                         help='Path to file containing validation annotations (optional, see readme)')
     # parser.add_argument('--csv_val', default=None,
     # 					help='Path to file containing validation annotations (optional, see readme)')

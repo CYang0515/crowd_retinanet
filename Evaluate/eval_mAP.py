@@ -54,5 +54,5 @@ def print_evaluation_scores(json_file, name='head'):
 
 if __name__ == '__main__':
     cfg = params()
-    json_file_body = './full.json'
+    json_file_body = './res_head.json'
     print_evaluation_scores(json_file_body, cfg.TYPE)

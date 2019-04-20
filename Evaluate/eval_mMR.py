@@ -24,6 +24,6 @@ def mMR(resFile, annFile):
     res_file.close()
 
 if __name__ == '__main__':
-    resFile = './full.json'
-    annFile = './annotations/instances_val_full2014.json'
+    resFile = './res_head.json'
+    annFile = './annotations/instances_val_head2014.json'
     mMR(resFile=resFile, annFile=annFile)

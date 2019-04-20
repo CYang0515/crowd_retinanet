@@ -82,7 +82,7 @@ def main(args=None):
 		raise ValueError('Dataset type not understood (must be csv or coco), exiting.')
 
 	print('2')
-	sampler = AspectRatioBasedSampler(dataset_train, batch_size=8, drop_last=False)  # bacth_size default 2
+	sampler = AspectRatioBasedSampler(dataset_train, batch_size=4, drop_last=False)  # bacth_size default 2
 	dataloader_train = DataLoader(dataset_train, num_workers=3, collate_fn=collater, batch_sampler=sampler)
 
 	if dataset_val is not None:
@@ -158,6 +158,8 @@ def main(args=None):
 		retinanet.module.freeze_bn()
 
 		epoch_loss = []
+		mAP = 0
+		dis = 0
 
 		for iter_num, data in enumerate(dataloader_train):
 			try:
@@ -200,27 +202,28 @@ def main(args=None):
 
 		# if parser.dataset == 'coco':
 		if dataset_val is not None:
-			if parser.dataset == 'coco':
-				print('Evaluating dataset')
+			if (epoch_num % 5 == 0 and epoch_num != 0) or epoch_num == parser.epochs - 1:
+				if parser.dataset == 'coco':
+					print('Evaluating dataset')
 
-				coco_eval.evaluate_coco(dataset_val, retinanet)
+					coco_eval.evaluate_coco(dataset_val, retinanet)
 
-			elif parser.dataset == 'csv': # and parser.csv_val is not None:
+				elif parser.dataset == 'csv': # and parser.csv_val is not None:
 
-				print('Evaluating dataset')
+					print('Evaluating dataset')
 
-				mAP, dis = csv_eval.evaluate(dataset_val, retinanet)
+					mAP, dis = csv_eval.evaluate(dataset_val, retinanet)
 
 		
 		scheduler.step(np.mean(epoch_loss))	
 
 		# torch.save(retinanet.module, '{}_retinanet_{}.pt'.format(parser.dataset, epoch_num))
-		torch.save(retinanet.module, 'all_full_{}_retinanet_{}_mAP{}_dis{}.pt'.format(parser.dataset, epoch_num, mAP, dis))
+		torch.save(retinanet.module, './model/all_full_{}_retinanet_{}_mAP{}_dis{}.pt'.format(parser.dataset, epoch_num, mAP, dis))
 
 	retinanet.eval()
 
 	# torch.save(retinanet, 'model_final.pt'.format(epoch_num))
-	torch.save(retinanet, 'all_full_{}_retinanet_final.pt'.format(parser.dataset))
+	torch.save(retinanet, './model/all_full_{}_retinanet_final.pt'.format(parser.dataset))
 
 if __name__ == '__main__':
 	main()
