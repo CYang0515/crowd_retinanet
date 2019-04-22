@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
+only_full = True # if true only detect full human else detect full and head human
 
 def calc_iou(a, b):
     area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
@@ -150,7 +150,10 @@ class FocalLoss(nn.Module):
                 regression_diff = torch.abs(targets - regression[positive_indices, :])
 
                 weights = torch.ones(regression_diff.shape).cuda()
-                weights[:, 4:] = 1 - assigned_ignores
+                if only_full:
+                    weights[:, 4:] = 0
+                else:
+                    weights[:, 4:] = 1 - assigned_ignores
                 regression_diff = regression_diff * weights
 
                 regression_loss = torch.where(

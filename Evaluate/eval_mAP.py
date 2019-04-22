@@ -20,7 +20,7 @@ class params():
     def __init__(self):
         self.BASEDIR = './'
         self.MODE_MASK = False
-        self.TYPE = 'head'
+        self.TYPE = 'full'
 
 def print_evaluation_scores(json_file, name='head'):
     ret = {}
@@ -54,5 +54,5 @@ def print_evaluation_scores(json_file, name='head'):
 
 if __name__ == '__main__':
     cfg = params()
-    json_file_body = './res_head.json'
+    json_file_body = './res_full.json'
     print_evaluation_scores(json_file_body, cfg.TYPE)

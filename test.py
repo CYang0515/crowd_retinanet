@@ -32,8 +32,8 @@ import hfv_crowdhuman_eval as csv_eval
 # assert torch.__version__.split('.')[1] == '4'
 
 print('CUDA available: {}'.format(torch.cuda.is_available()))
-
-
+model_dir = '/home/YC/crowd_retinanet/pytorch-retinanet/model/all_full_csv_retinanet_30_mAP{0: (0.71368672762258, 99481.0)}_dis[27.07117583].pt'
+# model_dir='/home/YC/pytorch-retinanet/all_full_csv_retinanet_36_mAP{0: (0.6896753220630812, 99481.0)}_dis[12.61821368].pt'
 def main(args=None):
     print('0')
     parser = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
@@ -51,7 +51,7 @@ def main(args=None):
 
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
     parser.add_argument('--epochs', help='Number of epochs', type=int, default=100)
-    parser.add_argument('--model', help='Pretrained model or nothing', type=str, default='/home/YC/pytorch-retinanet/all_full_csv_retinanet_36_mAP{0: (0.6896753220630812, 99481.0)}_dis[12.61821368].pt')
+    parser.add_argument('--model', help='Pretrained model or nothing', type=str, default=model_dir)
     parser.add_argument('--gpu', help='Whether to use gpu', type=bool, default=True)
 
     parser = parser.parse_args(args)
