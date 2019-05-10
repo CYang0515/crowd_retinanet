@@ -8,7 +8,7 @@ class Anchors(nn.Module):
         super(Anchors, self).__init__()
 
         if pyramid_levels is None:
-            self.pyramid_levels = [3, 4, 5, 6, 7]
+            self.pyramid_levels = [2, 3, 4, 5, 6, 7]
         if strides is None:
             self.strides = [2 ** x for x in self.pyramid_levels]
         if sizes is None:
@@ -18,7 +18,8 @@ class Anchors(nn.Module):
             # self.ratios = np.array([0.5, 1, 2])
             self.ratios = np.array([1.0, 1.5, 2.0, 2.5, 3.0])
         if scales is None:
-            self.scales = np.array([2 ** (-2), 2 ** (-1), 2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)])
+            self.scales = np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)])
+            # self.scales = np.array([2 ** (-2), 2 ** (-1), 2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)])
 
     def forward(self, image):
         

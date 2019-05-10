@@ -30,9 +30,9 @@ import coco_eval
 import hfv_crowdhuman_eval as csv_eval
 
 # assert torch.__version__.split('.')[1] == '4'
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 print('CUDA available: {}'.format(torch.cuda.is_available()))
-model_dir = '/home/YC/crowd_retinanet/pytorch-retinanet/model/all_full_csv_retinanet_30_mAP{0: (0.71368672762258, 99481.0)}_dis[27.07117583].pt'
+model_dir = '/home/YC/crowd_retinanet/pytorch-retinanet/model/adam_A_F_csv_retinanet_19_mAP0_dis0.pt'
 # model_dir='/home/YC/pytorch-retinanet/all_full_csv_retinanet_36_mAP{0: (0.6896753220630812, 99481.0)}_dis[12.61821368].pt'
 def main(args=None):
     print('0')

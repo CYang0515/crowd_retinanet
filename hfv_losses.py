@@ -27,7 +27,7 @@ class FocalLoss(nn.Module):
     # def __init__(self):
 
     def forward(self, classifications, regressions, anchors, annotations):
-        alpha = 0.25
+        alpha = 0.75  # 0.25
         gamma = 2.0
         ignores = annotations[:, :, [-1]]
         annotations = annotations[:, :, 0: -1]
@@ -161,7 +161,10 @@ class FocalLoss(nn.Module):
                     0.5 * 9.0 * torch.pow(regression_diff, 2),
                     regression_diff - 0.5 / 9.0
                 )
-                regression_losses.append(regression_loss.mean())
+                if only_full:
+                    regression_losses.append(regression_loss[:, 0:4].mean())
+                else:
+                    regression_losses.append(regression_loss.mean())
             else:
                 regression_losses.append(torch.tensor(0).float().cuda())
 

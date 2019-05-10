@@ -72,8 +72,8 @@ def evaluate(
         generator,
         retinanet,
         iou_threshold=0.5,
-        score_threshold=0.05,
-        max_detections=100,
+        score_threshold=0, #0.05,
+        max_detections=500,
         save_path=None
 ):
     """ Evaluate a given dataset using a given retinanet.

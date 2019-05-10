@@ -26,7 +26,7 @@ model_urls = {
 
 
 class PyramidFeatures(nn.Module):
-    def __init__(self, C3_size, C4_size, C5_size, feature_size=256):
+    def __init__(self, C2_size, C3_size, C4_size, C5_size, feature_size=256):
         super(PyramidFeatures, self).__init__()
 
         # upsample C5 to get P5 from the FPN paper
@@ -41,7 +41,12 @@ class PyramidFeatures(nn.Module):
 
         # add P4 elementwise to C3
         self.P3_1 = nn.Conv2d(C3_size, feature_size, kernel_size=1, stride=1, padding=0)
+        self.P3_upsampled = nn.Upsample(scale_factor=2, mode='nearest')
         self.P3_2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, stride=1, padding=1)
+
+        # add P3 elementwise to C2
+        self.P2_1 = nn.Conv2d(C2_size, feature_size, kernel_size=1, stride=1, padding=0)
+        self.P2_2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, stride=1, padding=1)
 
         # "P6 is obtained via a 3x3 stride-2 conv on C5"
         self.P6 = nn.Conv2d(C5_size, feature_size, kernel_size=3, stride=2, padding=1)
@@ -51,7 +56,7 @@ class PyramidFeatures(nn.Module):
         self.P7_2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, stride=2, padding=1)
 
     def forward(self, inputs):
-        C3, C4, C5 = inputs
+        C2, C3, C4, C5 = inputs
 
         P5_x = self.P5_1(C5)
         P5_upsampled_x = self.P5_upsampled(P5_x)
@@ -64,14 +69,19 @@ class PyramidFeatures(nn.Module):
 
         P3_x = self.P3_1(C3)
         P3_x = P3_x + P4_upsampled_x
+        P3_upsampled_x = self.P3_upsampled(P3_x)
         P3_x = self.P3_2(P3_x)
+
+        P2_x = self.P2_1(C2)
+        P2_x = P2_x + P3_upsampled_x
+        P2_x = self.P2_2(P2_x)
 
         P6_x = self.P6(C5)
 
         P7_x = self.P7_1(P6_x)
         P7_x = self.P7_2(P7_x)
 
-        return [P3_x, P4_x, P5_x, P6_x, P7_x]
+        return [P2_x, P3_x, P4_x, P5_x, P6_x, P7_x]
 
 
 class RegressionModel(nn.Module):
@@ -179,13 +189,16 @@ class ResNet(nn.Module):
             fpn_sizes = [self.layer2[layers[1] - 1].conv2.out_channels, self.layer3[layers[2] - 1].conv2.out_channels,
                          self.layer4[layers[3] - 1].conv2.out_channels]
         elif block == Bottleneck:
-            fpn_sizes = [self.layer2[layers[1] - 1].conv3.out_channels, self.layer3[layers[2] - 1].conv3.out_channels,
-                         self.layer4[layers[3] - 1].conv3.out_channels]
+            fpn_sizes = [self.layer1[layers[0] - 1].conv3.out_channels, self.layer2[layers[1] - 1].conv3.out_channels,
+                         self.layer3[layers[2] - 1].conv3.out_channels, self.layer4[layers[3] - 1].conv3.out_channels]
+            # fpn_sizes = [self.layer2[layers[1] - 1].conv3.out_channels, self.layer3[layers[2] - 1].conv3.out_channels,
+            #              self.layer4[layers[3] - 1].conv3.out_channels]
 
-        self.fpn = PyramidFeatures(fpn_sizes[0], fpn_sizes[1], fpn_sizes[2])
+        self.fpn = PyramidFeatures(fpn_sizes[0], fpn_sizes[1], fpn_sizes[2], fpn_sizes[3])
+        # self.fpn = PyramidFeatures(fpn_sizes[0], fpn_sizes[1], fpn_sizes[2])
 
-        self.regressionModel = RegressionModel(256, num_anchors=25)
-        self.classificationModel = ClassificationModel(256, num_classes=num_classes, num_anchors=25)
+        self.regressionModel = RegressionModel(256, num_anchors=15)
+        self.classificationModel = ClassificationModel(256, num_classes=num_classes, num_anchors=15)
 
         self.anchors = Anchors()
 
@@ -253,7 +266,7 @@ class ResNet(nn.Module):
         x3 = self.layer3(x2)
         x4 = self.layer4(x3)
 
-        features = self.fpn([x2, x3, x4])
+        features = self.fpn([x1, x2, x3, x4])
 
         regression = torch.cat([self.regressionModel(feature) for feature in features], dim=1)
 
@@ -265,12 +278,12 @@ class ResNet(nn.Module):
             return self.focalLoss(classification, regression, anchors, annotations)
         else:
             transformed_anchors = self.regressBoxes(anchors, regression)
-            transformed_anchors = self.clipBoxes(transformed_anchors, img_batch)
+            # transformed_anchors = self.clipBoxes(transformed_anchors, img_batch)
 
             scores = torch.max(classification, dim=2, keepdim=True)[0]
 
-            scores_over_thresh = (scores > 0.05)[0, :, 0]
-            # scores_over_thresh = (scores >= 0.0)[0, :, 0]
+            # scores_over_thresh = (scores > 0.05)[0, :, 0]
+            scores_over_thresh = (scores >= 0.0)[0, :, 0]
 
             if scores_over_thresh.sum() == 0:
                 # no boxes to NMS, just return
@@ -284,11 +297,18 @@ class ResNet(nn.Module):
             # modify
             # transformed_anchors, scores = post_nums(transformed_anchors, scores, features)
             #
-            anchors_nms_idx = nms(torch.cat([transformed_anchors[:, :, 0: 4], scores], dim=2)[0, :, :], 0.5)
+            score_topk, indices = torch.topk(scores, 10000, dim=1)
+            indices = indices[0, :, 0]
+            box = transformed_anchors[:, indices, 0: 4]
+            s = scores[:, indices, :]
+            anchors_nms_idx = nms(torch.cat([box, s], dim=2)[0, :, :], 0.5)
+            nms_scores, nms_class = classification[:, indices, :][0, anchors_nms_idx, :].max(dim=1)
 
-            nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
+            # anchors_nms_idx = nms(torch.cat([transformed_anchors[:, :, 0: 4], scores], dim=2)[0, :, :], 0.5)
 
-            return [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
+            # nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
+
+            return [nms_scores, nms_class, transformed_anchors[:, indices, :][0, anchors_nms_idx, :]]
 
 
 def resnet18(num_classes, pretrained=False, **kwargs):
